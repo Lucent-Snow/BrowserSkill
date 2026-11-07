@@ -11,6 +11,12 @@ determines which versions can connect.
 
 ### Added
 
+- Experimental MCP tool `jev_browser_run` (enabled with `BSK_JEV=1`) delegates a bounded
+  browser loop to a Jev decision model. Jev chooses one operation and one observed `@eN`
+  target per turn; BrowserSkill keeps ownership of sync, refs, guarded execution and
+  re-observation. The calling LLM supplies the goal, literal completion evidence and
+  text to type, and only code-verified evidence produces `verified_done`. See
+  `docs/jev-delegate.md`.
 - Local pairing with mutual proofs, durable key rotation and interruption recovery.
   Paired connections verify the daemon before sending business traffic; activation
   invalidates the original link. Device revocation and browser registration are

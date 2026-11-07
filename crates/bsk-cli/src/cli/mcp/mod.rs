@@ -6,6 +6,7 @@
 //! keep their CLI JSON shapes. Stdout carries protocol messages only; logs
 //! go to stderr.
 
+mod jev;
 mod server;
 mod tools;
 

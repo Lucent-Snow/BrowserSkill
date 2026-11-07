@@ -74,6 +74,13 @@ saved flow by name and returns its outputs, so a repeated task takes about two t
 [recipes](recipes.md). The tool stays out of `tools/list` otherwise, so clients pay nothing
 for it.
 
+With `BSK_JEV=1` in the server's environment, `jev_browser_run` also appears. One call
+delegates a bounded observe-decide-act loop to a Jev decision model while BrowserSkill
+keeps ownership of observations, refs and native execution. The LLM supplies the goal,
+literal completion evidence and any text to type; a model `DONE` is never treated as
+success. See [Jev delegate](jev-delegate.md). The tool stays out of `tools/list`
+otherwise, and the seven original tools remain available for direct LLM use.
+
 `bsk_inspect` can return a screenshot as MCP image content, as well as bounded
 observations, HTML, console/network entries, and loaded-DOM extraction. Screenshots
 retain their original pixel dimensions; this version does not downscale them.
