@@ -116,9 +116,19 @@ it was not caused by, and was not silently fixed by, the Node change.
 7470.3 ms. The important negative result: delegation reduces LLM calls and
 latency on both backends, but on OCU it roughly doubles total model tokens
 because Jev must carry the full AX state on every step. The gateway exposes no
-cost field, so tokens are a proxy, not a price. Batch-capable baselines
+cost field, so tokens were only a proxy. Batch-capable baselines
 (`bsk_plan`, persistent `js` REPL) were used deliberately; a one-LLM-call-per-step
 baseline would have been a straw man.
+
+**Correction added later the same day (T1 cost measurement).** Treating total tokens as a
+cost proxy is misleading when two differently priced models are involved. With published
+list prices (LLM $0.20/1M input, $1.20/1M output; Jev $0.042/1M input, output free;
+1 USD = 6.6713 CNY), a fresh 20-run measurement of one fixed task found delegation
+cheaper on BOTH backends: BSK 0.167x the cost (83.3% less, 39.9% less wall time), OCU
+0.599x the cost (40.1% less, 12.5% less wall time) even though OCU used 1.95x the tokens.
+Three pricing scenarios agree. See `jev-integration/protocol/m3-summary.md` and
+`cost_report.json` in the developer workspace. The gateway still returns no invoice;
+the LLM short id is priced at the identically named public model's list rate.
 
 **M4 — protocol, not a shared SDK.** Rust/VOM and JS/AX share a decision
 contract, not runtime code. Deliverables: canonical
