@@ -79,7 +79,9 @@ delegates a bounded observe-decide-act loop to a Jev decision model while Browse
 keeps ownership of observations, refs and native execution. The LLM supplies the goal,
 literal completion evidence and any text to type; a model `DONE` is never treated as
 success. See [Jev delegate](jev-delegate.md). The tool stays out of `tools/list`
-otherwise, and the seven original tools remain available for direct LLM use.
+otherwise, and the seven original tools remain available for direct LLM use. The shared
+decision contract with the desktop implementation and its CI conformance vectors are
+documented in [Jev delegate protocol](jev-delegate-protocol.md).
 
 `bsk_inspect` can return a screenshot as MCP image content, as well as bounded
 observations, HTML, console/network entries, and loaded-DOM extraction. Screenshots

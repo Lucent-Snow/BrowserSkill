@@ -17,6 +17,10 @@ determines which versions can connect.
   re-observation. The calling LLM supplies the goal, literal completion evidence and
   text to type, and only code-verified evidence produces `verified_done`. See
   `docs/jev-delegate.md`.
+- Language-independent Jev delegate protocol v0.1 conformance vectors and a crate
+  self-test (`jev_protocol_vectors_are_satisfied`), so the browser and desktop
+  implementations are checked against the same seven decision moments. See
+  `docs/jev-delegate-protocol.md`.
 - Local pairing with mutual proofs, durable key rotation and interruption recovery.
   Paired connections verify the daemon before sending business traffic; activation
   invalidates the original link. Device revocation and browser registration are

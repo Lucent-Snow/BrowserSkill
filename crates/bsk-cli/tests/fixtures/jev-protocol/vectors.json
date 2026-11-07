@@ -1,0 +1,191 @@
+[
+  {
+    "id": "two_step_form",
+    "description": "A normal first decision: one request carries the operation head and both target heads; only the matching target head is consumed.",
+    "request": { "goal": "Fill the field and submit.", "expected": "Received!", "text": "cats", "max_steps": 6 },
+    "candidates": [
+      { "index": "1", "label": "Search", "role": "textbox", "value": "", "editable": true },
+      { "index": "2", "label": "Go", "role": "button", "value": "", "editable": false }
+    ],
+    "bsk": {
+      "text": "@vom 1\nL1 page\n  @e1 textbox \"Search\" [empty]\n  @e2 button \"Go\"\n",
+      "url": "https://example.com/search",
+      "title": "Search"
+    },
+    "ocu": {
+      "ax": "App=Fixture (pid 1)\nWindow: \"Demo\", App: Fixture.\n1 text field ID: f-input Value:  Frame: x=0, y=0, w=1, h=1\n2 button Go ID: f-go Frame: x=0, y=0, w=1, h=1\n3 static text ID: f-status Value: Waiting Frame: x=0, y=0, w=1, h=1\n"
+    },
+    "decision": { "operation": "TYPE_TEXT", "target": "1" },
+    "answer_mode": "valid",
+    "previous_same_as_current": false,
+    "expect": {
+      "heads": ["operation", "click_target", "type_text_target"],
+      "operation": "TYPE_TEXT",
+      "target": "1",
+      "decision_error": null,
+      "verified": false
+    }
+  },
+  {
+    "id": "result_page_evidence",
+    "description": "Non-control page text that appeared after an action is valid completion evidence on both observation formats.",
+    "request": { "goal": "Fill the field and submit.", "expected": "Received!", "text": "cats", "max_steps": 6 },
+    "candidates": [
+      { "index": "1", "label": "Search", "role": "textbox", "value": "", "editable": true },
+      { "index": "2", "label": "Go", "role": "button", "value": "", "editable": false }
+    ],
+    "bsk": {
+      "text": "@vom 2\nL1 page\n  @e1 textbox \"Search\" [filled] =\"cats\"\n  heading \"Received!\"\n",
+      "url": "https://example.com/result",
+      "title": "Form Result"
+    },
+    "ocu": {
+      "ax": "App=Fixture (pid 1)\nWindow: \"Demo\", App: Fixture.\n1 text field ID: f-input Value: cats Frame: x=0, y=0, w=1, h=1\n2 button Go ID: f-go Frame: x=0, y=0, w=1, h=1\n3 static text ID: f-status Value: Received! Frame: x=0, y=0, w=1, h=1\n"
+    },
+    "decision": { "operation": "CLICK", "target": "2" },
+    "answer_mode": "valid",
+    "previous_same_as_current": false,
+    "expect": {
+      "heads": ["operation", "click_target", "type_text_target"],
+      "operation": "CLICK",
+      "target": "2",
+      "decision_error": null,
+      "verified": true
+    }
+  },
+  {
+    "id": "control_value_is_not_evidence",
+    "description": "A typed value inside a control line proves only that typing happened. It must never satisfy completion, in VOM or in AX text.",
+    "request": { "goal": "Fill the field and submit.", "expected": "cats", "text": "cats", "max_steps": 6 },
+    "candidates": [
+      { "index": "1", "label": "Search", "role": "textbox", "value": "", "editable": true },
+      { "index": "2", "label": "Go", "role": "button", "value": "", "editable": false }
+    ],
+    "bsk": {
+      "text": "@vom 1\nL1 page\n  @e1 textbox \"Search\" [filled] =\"cats\"\n  @e2 button \"Go\"\n",
+      "url": "https://example.com/search",
+      "title": "Search"
+    },
+    "ocu": {
+      "ax": "App=Fixture (pid 1)\nWindow: \"Demo\", App: Fixture.\n1 text field ID: f-input Value: cats Frame: x=0, y=0, w=1, h=1\n2 button Go ID: f-go Frame: x=0, y=0, w=1, h=1\n3 static text ID: f-status Value: Waiting Frame: x=0, y=0, w=1, h=1\n"
+    },
+    "decision": { "operation": "CLICK", "target": "2" },
+    "answer_mode": "valid",
+    "previous_same_as_current": false,
+    "expect": {
+      "heads": ["operation", "click_target", "type_text_target"],
+      "operation": "CLICK",
+      "target": "2",
+      "decision_error": null,
+      "verified": false
+    }
+  },
+  {
+    "id": "preexisting_evidence",
+    "description": "Evidence that was already visible before the action is not proof that the action achieved the goal.",
+    "request": { "goal": "Fill the field and submit.", "expected": "Received!", "text": "cats", "max_steps": 6 },
+    "candidates": [
+      { "index": "1", "label": "Search", "role": "textbox", "value": "", "editable": true },
+      { "index": "2", "label": "Go", "role": "button", "value": "", "editable": false }
+    ],
+    "bsk": {
+      "text": "@vom 2\nL1 page\n  heading \"Received!\"\n",
+      "url": "https://example.com/result",
+      "title": "Form Result"
+    },
+    "ocu": {
+      "ax": "App=Fixture (pid 1)\nWindow: \"Demo\", App: Fixture.\n3 static text ID: f-status Value: Received! Frame: x=0, y=0, w=1, h=1\n"
+    },
+    "decision": { "operation": "CLICK", "target": "2" },
+    "answer_mode": "valid",
+    "previous_same_as_current": true,
+    "expect": {
+      "heads": ["operation", "click_target", "type_text_target"],
+      "operation": "CLICK",
+      "target": "2",
+      "decision_error": null,
+      "verified": false
+    }
+  },
+  {
+    "id": "partial_probabilities",
+    "description": "A head that does not return a probability for every offered id must be rejected rather than guessed around.",
+    "request": { "goal": "Fill the field and submit.", "expected": "Received!", "text": "cats", "max_steps": 6 },
+    "candidates": [
+      { "index": "1", "label": "Search", "role": "textbox", "value": "", "editable": true },
+      { "index": "2", "label": "Go", "role": "button", "value": "", "editable": false }
+    ],
+    "bsk": {
+      "text": "@vom 1\nL1 page\n  @e1 textbox \"Search\" [empty]\n  @e2 button \"Go\"\n",
+      "url": "https://example.com/search",
+      "title": "Search"
+    },
+    "ocu": {
+      "ax": "App=Fixture (pid 1)\nWindow: \"Demo\", App: Fixture.\n1 text field ID: f-input Value:  Frame: x=0, y=0, w=1, h=1\n2 button Go ID: f-go Frame: x=0, y=0, w=1, h=1\n"
+    },
+    "decision": { "operation": "CLICK", "target": "2" },
+    "answer_mode": "partial",
+    "previous_same_as_current": false,
+    "expect": {
+      "heads": ["operation", "click_target", "type_text_target"],
+      "operation": null,
+      "target": null,
+      "decision_error": "invalid_choice",
+      "verified": false
+    }
+  },
+  {
+    "id": "stale_target",
+    "description": "A target id that is not in the current observation must be rejected before any action is executed.",
+    "request": { "goal": "Fill the field and submit.", "expected": "Received!", "text": "cats", "max_steps": 6 },
+    "candidates": [
+      { "index": "1", "label": "Search", "role": "textbox", "value": "", "editable": true },
+      { "index": "2", "label": "Go", "role": "button", "value": "", "editable": false }
+    ],
+    "bsk": {
+      "text": "@vom 1\nL1 page\n  @e1 textbox \"Search\" [empty]\n  @e2 button \"Go\"\n",
+      "url": "https://example.com/search",
+      "title": "Search"
+    },
+    "ocu": {
+      "ax": "App=Fixture (pid 1)\nWindow: \"Demo\", App: Fixture.\n1 text field ID: f-input Value:  Frame: x=0, y=0, w=1, h=1\n2 button Go ID: f-go Frame: x=0, y=0, w=1, h=1\n"
+    },
+    "decision": { "operation": "CLICK", "target": "999" },
+    "answer_mode": "stale_target",
+    "previous_same_as_current": false,
+    "expect": {
+      "heads": ["operation", "click_target", "type_text_target"],
+      "operation": null,
+      "target": null,
+      "decision_error": "invalid_choice",
+      "verified": false
+    }
+  },
+  {
+    "id": "done_unverified",
+    "description": "A model DONE answer is a handoff, never a verified success; completion stays in code.",
+    "request": { "goal": "Fill the field and submit.", "expected": "Received!", "text": "cats", "max_steps": 6 },
+    "candidates": [
+      { "index": "1", "label": "Search", "role": "textbox", "value": "", "editable": true },
+      { "index": "2", "label": "Go", "role": "button", "value": "", "editable": false }
+    ],
+    "bsk": {
+      "text": "@vom 1\nL1 page\n  @e1 textbox \"Search\" [empty]\n  @e2 button \"Go\"\n",
+      "url": "https://example.com/search",
+      "title": "Search"
+    },
+    "ocu": {
+      "ax": "App=Fixture (pid 1)\nWindow: \"Demo\", App: Fixture.\n1 text field ID: f-input Value:  Frame: x=0, y=0, w=1, h=1\n2 button Go ID: f-go Frame: x=0, y=0, w=1, h=1\n"
+    },
+    "decision": { "operation": "DONE", "target": null },
+    "answer_mode": "valid",
+    "previous_same_as_current": false,
+    "expect": {
+      "heads": ["operation", "click_target", "type_text_target"],
+      "operation": "DONE",
+      "target": null,
+      "decision_error": null,
+      "verified": false
+    }
+  }
+]

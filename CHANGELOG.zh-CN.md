@@ -11,6 +11,9 @@ CLI、扩展和 DSH 插件可以分别发布，能否连接由协议兼容性决
   Jev 每轮只从当前观察中选择一个操作和一个 `@eN` 目标；观察、引用有效期、受保护的动作执行与
   动作后重新同步仍由 BrowserSkill 负责。上层 LLM 提供局部目标、字面验收证据和要输入的文本，
   只有代码独立核验证据后才返回 `verified_done`。详见 `docs/jev-delegate.md`。
+- 新增语言无关的 Jev 委派协议 v0.1 conformance 向量与 crate 自检
+  （`jev_protocol_vectors_are_satisfied`），让浏览器与桌面两个实现对照同一组七个决策时刻。
+  详见 `docs/jev-delegate-protocol.md`。
 - 本机配对支持双向身份验证、持久化密钥轮换和中断恢复。已配对连接在发送业务请求前验证 daemon，激活后原链接失效。撤销与浏览器注册串行执行，撤销成功后对应连接已清理。
 - `bsk daemon pair --replace`、本机设备列表和撤销、`daemon rotate` 及 `daemon trust-local on|off`。状态和诊断命令提供配对指引。
 - 扩展增加配对设置、分阶段验证、十种语言的指引和跳过验证确认。切换到本机模式时保留远程授权。新安装和升级均可使用未配对连接，扩展显示身份提示和官方安全说明。已配对连接和待恢复凭据都需要继续验证。

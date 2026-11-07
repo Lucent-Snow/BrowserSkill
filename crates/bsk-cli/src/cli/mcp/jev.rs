@@ -1058,4 +1058,190 @@ mod tests {
             "CLICK" | "TYPE_TEXT" | "SCROLL_DOWN" | "WAIT" | "DONE" | "BLOCKED"
         ));
     }
+
+    // -----------------------------------------------------------------------
+    // Cross-language protocol conformance (v0.1). The canonical vectors live in
+    // the developer workspace; the fixture copy is the CI-readable source of
+    // truth for this crate. See docs/jev-delegate-protocol.md.
+    // -----------------------------------------------------------------------
+
+    fn vector_observation(vector: &Value) -> Observation {
+        let bsk = &vector["bsk"];
+        let text = bsk["text"].as_str().unwrap_or_default().to_owned();
+        let empty: Vec<Value> = Vec::new();
+        let candidates: Vec<Candidate> = vector["candidates"]
+            .as_array()
+            .unwrap_or(&empty)
+            .iter()
+            .map(|item| {
+                let index = item["index"].as_str().unwrap_or_default();
+                Candidate {
+                    index: index.to_owned(),
+                    reference: format!("e{index}"),
+                    role: item["role"].as_str().unwrap_or_default().to_owned(),
+                    label: item["label"].as_str().unwrap_or_default().to_owned(),
+                    value: item["value"].as_str().unwrap_or_default().to_owned(),
+                    editable: item["editable"].as_bool().unwrap_or(false),
+                }
+            })
+            .collect();
+        Observation {
+            reply: sync_reply(&text, 1),
+            text,
+            candidates,
+            url: bsk["url"].as_str().unwrap_or_default().to_owned(),
+            title: bsk["title"].as_str().unwrap_or_default().to_owned(),
+            context: Some("ctx-1".into()),
+            observation_id: Some("obs-1".into()),
+            tab: Some(7),
+        }
+    }
+
+    /// Mirrors the real API: every head returns a probability for every offered
+    /// id, unless the vector deliberately corrupts that distribution.
+    fn vector_answers(body: &Value, vector: &Value) -> Value {
+        let operation = vector["decision"]["operation"].as_str().unwrap_or("CLICK");
+        let target = vector["decision"]["target"].as_str();
+        let target_head = format!("{}_target", operation.to_ascii_lowercase());
+        let mode = vector["answer_mode"].as_str().unwrap_or("valid");
+        let mut answers = Map::new();
+        for (head, question) in body["questions"].as_object().expect("questions object") {
+            let ids: Vec<String> = question["criteria"]
+                .as_object()
+                .expect("criteria object")
+                .keys()
+                .cloned()
+                .collect();
+            let mut picked = if head == "operation" {
+                operation.to_owned()
+            } else if head == &target_head {
+                target
+                    .map(str::to_owned)
+                    .unwrap_or_else(|| ids.first().cloned().unwrap_or_default())
+            } else {
+                ids.first().cloned().unwrap_or_default()
+            };
+            if mode == "stale_target" && head == &target_head {
+                picked = ids.first().cloned().unwrap_or_default();
+            }
+            let others = ids.len().saturating_sub(1).max(1) as f64;
+            let mut probabilities = Map::new();
+            for id in &ids {
+                let probability = if ids.len() == 1 {
+                    1.0
+                } else if id == &picked {
+                    0.9
+                } else {
+                    0.1 / others
+                };
+                probabilities.insert(id.clone(), json!(probability));
+            }
+            if mode == "partial" && head == "operation" {
+                if let Some(drop) = ids.iter().find(|id| *id != &picked) {
+                    probabilities.remove(drop.as_str());
+                }
+            }
+            let choice = if mode == "stale_target" && head == &target_head {
+                target.unwrap_or("999").to_owned()
+            } else {
+                picked
+            };
+            answers.insert(
+                head.clone(),
+                json!({"choice": choice, "confidence": 0.9, "probabilities": probabilities}),
+            );
+        }
+        json!({"answers": answers, "model": "jev-test", "usage": {"input_tokens": 10}})
+    }
+
+    #[test]
+    fn jev_protocol_vectors_are_satisfied() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/jev-protocol/vectors.json");
+        let raw = std::fs::read_to_string(&path)
+            .unwrap_or_else(|error| panic!("cannot read {}: {error}", path.display()));
+        let vectors: Vec<Value> = serde_json::from_str(&raw).expect("valid vectors JSON");
+        assert!(vectors.len() >= 7, "expected at least 7 protocol vectors");
+
+        for vector in &vectors {
+            let id = vector["id"].as_str().unwrap_or("?");
+            let request = Request {
+                session: "s".into(),
+                goal: vector["request"]["goal"]
+                    .as_str()
+                    .unwrap_or_default()
+                    .into(),
+                expected: vector["request"]["expected"].as_str().map(str::to_owned),
+                text: vector["request"]["text"].as_str().map(str::to_owned),
+                max_steps: vector["request"]["max_steps"].as_u64().unwrap_or(6) as u32,
+                tab: None,
+            };
+            let observation = vector_observation(vector);
+            let body = questions(&request, &observation, &[]);
+
+            let mut heads: Vec<String> = body["questions"]
+                .as_object()
+                .expect("questions")
+                .keys()
+                .cloned()
+                .collect();
+            heads.sort();
+            let mut expected_heads: Vec<String> = vector["expect"]["heads"]
+                .as_array()
+                .expect("expected heads")
+                .iter()
+                .map(|value| value.as_str().unwrap_or_default().to_owned())
+                .collect();
+            expected_heads.sort();
+            assert_eq!(heads, expected_heads, "{id}: heads");
+
+            let response = vector_answers(&body, vector);
+            let decision = choose(&body, &response["answers"], &observation);
+            match (vector["expect"]["decision_error"].as_str(), decision) {
+                (Some(reason), Err(stop)) => assert_eq!(stop.reason, reason, "{id}: error reason"),
+                (Some(reason), Ok(_)) => panic!("{id}: expected {reason} but choose succeeded"),
+                (None, Err(stop)) => panic!("{id}: unexpected {}: {}", stop.reason, stop.message),
+                (None, Ok(decision)) => {
+                    assert_eq!(
+                        decision.operation,
+                        vector["expect"]["operation"].as_str().unwrap_or_default(),
+                        "{id}: operation"
+                    );
+                    let actual_target = decision.reference.as_deref().and_then(|reference| {
+                        observation
+                            .candidates
+                            .iter()
+                            .find(|candidate| candidate.reference == reference)
+                            .map(|candidate| candidate.index.as_str())
+                    });
+                    assert_eq!(
+                        actual_target,
+                        vector["expect"]["target"].as_str(),
+                        "{id}: target"
+                    );
+                }
+            }
+
+            let previous = if vector["previous_same_as_current"]
+                .as_bool()
+                .unwrap_or(false)
+            {
+                evidence_text(&observation)
+            } else {
+                "no evidence yet".to_owned()
+            };
+            let trace = [json!({"step": 0})];
+            let accepted = verified(
+                request.expected.as_deref(),
+                &evidence_text(&observation),
+                &previous,
+                &trace,
+            );
+            assert_eq!(
+                accepted,
+                vector["expect"]["verified"].as_bool().unwrap_or(false),
+                "{id}: verified"
+            );
+        }
+    }
 }

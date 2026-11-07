@@ -2,8 +2,8 @@
 
 Branch `jev-integration` of `Lucent-Snow/BrowserSkill` (fork of `Tencent/BrowserSkill`).
 This is the M1 experiment of the Jev GUI tool integration plan: one new
-LLM-callable MCP tool on top of BrowserSkill, with the OCU/macOS AX experiment
-(M2) still pending.
+LLM-callable MCP tool on top of BrowserSkill. M2–M4 were completed later in the
+same work session; see "Follow-up (M2–M4)" at the end of this note.
 
 ## Baseline
 
@@ -78,12 +78,12 @@ Offline contracts: 7 passed, 1 ignored (paid API); `cargo clippy -p bsk
 Both were real behaviour of the integrated system, not unit-test artifacts.
 The LLM-side goal, text and completion evidence remain the caller's job.
 
-## Boundaries and next steps
+## Boundaries at the end of M1
 
-- M1 only. No `SELECT`, no screenshot/OCR/visual coordinates, no script
-  execution, no macOS AX experiment (M2) and no LLM-only baseline comparison
-  (M3). The OCU repository was pulled for M0 reading only; it has not been
-  forked or modified.
+- M1 only at this point. No `SELECT`, no screenshot/OCR/visual coordinates, no
+  script execution, no macOS AX experiment (M2) and no LLM-only baseline
+  comparison (M3). The OCU repository was pulled for M0 reading only; it has not
+  been forked or modified **as of this M1 snapshot**.
 - A fair M3 baseline must let the LLM use `bsk_plan` and other batching tools;
   "one LLM call per step" is not a valid baseline. Compare success rate,
   end-to-end latency, total model cost, model/tool calls, takeovers and
@@ -93,3 +93,46 @@ The LLM-side goal, text and completion evidence remain the caller's job.
   anchor. Completion does not depend on URL/title.
 - The tool adds an outbound HTTP dependency to `bsk mcp`. A decision failure
   leaves the page untouched; secrets are read from the environment only.
+
+## Follow-up (M2–M4, completed 2026-11-07)
+
+**M2 — desktop delegation.** Forked `iFurySt/open-computer-use` to
+`Lucent-Snow/open-computer-use@jev-desktop` and added `OCU_JEV=1` gated
+`jev_desktop_run` in the Node REPL layer (no Swift changes). AX-only: no
+screenshots, OCR or coordinates; `setValue` / `click` / `scroll` stay native.
+Real Jev end-to-end on the headless fixture took 2 steps / 2 model calls /
+3379 ms, with an independent AX re-read confirming `Counter: 1` and `cats`.
+A real TCC read-only snapshot (720 localized AX lines) parsed into the 60
+finite candidates the request actually offers. `swift test` has an unrelated
+upstream Swift 6.4 compile failure in `LockedUseIncidentReplayTests.swift`;
+it was not caused by, and was not silently fixed by, the Node change.
+
+**M3 — fair same-backend comparison.** `jev-integration/m3_compare.py` +
+`m3_report.json`; readable summary in `jev-integration/protocol/m3-summary.md`.
+12/12 runs succeeded with `gpt-5.6-luna` on one gateway. BSK baseline
+3.3 LLM calls / 12191 tokens / 18173 ms vs delegated 1 call / 596 LLM tokens /
+5186 total model tokens / 9600 ms. OCU baseline 2 calls / 2589.7 tokens /
+8413.7 ms vs delegated 1 call / 721 LLM tokens / **5026 total model tokens** /
+7470.3 ms. The important negative result: delegation reduces LLM calls and
+latency on both backends, but on OCU it roughly doubles total model tokens
+because Jev must carry the full AX state on every step. The gateway exposes no
+cost field, so tokens are a proxy, not a price. Batch-capable baselines
+(`bsk_plan`, persistent `js` REPL) were used deliberately; a one-LLM-call-per-step
+baseline would have been a straw man.
+
+**M4 — protocol, not a shared SDK.** Rust/VOM and JS/AX share a decision
+contract, not runtime code. Deliverables: canonical
+`jev-integration/protocol/SPEC.md`, 7 executable vectors in
+`protocol/vectors.json`, and `protocol/conformance.mjs`. This crate now holds a
+byte-identical CI copy at
+`crates/bsk-cli/tests/fixtures/jev-protocol/vectors.json` and the Rust test
+`jev_protocol_vectors_are_satisfied` checks production `questions()` /
+`choose()` / `evidence_text()` / `verified()` against them. OCU holds its own
+copy and `jev-protocol.test.mjs`. Local result:
+`CONFORMANCE: PASS (7 vectors, 2 implementations)` (Rust 1 test, Node 8 tests).
+See `docs/jev-delegate-protocol.md`.
+
+Polish and ablation experiments were explicitly deferred by the user until all
+planned stages are complete; the ablation switches (`deterministic`,
+`require_controls`, retry counts, candidate limits) are recorded in the M3
+summary but have not been run yet.
